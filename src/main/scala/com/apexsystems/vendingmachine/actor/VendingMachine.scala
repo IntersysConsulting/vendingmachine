@@ -10,8 +10,7 @@ case class Money(amount : Double)
 case class Item(val name : String, val sku : Int, val price : Double)
 case class Cancel()
 case class Error(desc : String)
-case class Dispense(position : String, slot : ListBuffer[Item])
-
+case class Dispense(position : String, item : Item)
 
 
 class VendingMachine(var currentAmount : Double, slots : Map[String, ListBuffer[Item]]) extends Actor{
@@ -19,40 +18,34 @@ class VendingMachine(var currentAmount : Double, slots : Map[String, ListBuffer[
 
   override def receive: Receive = {
     case Money(amount) =>
-      if(validAmounts contains amount){
-        currentAmount+=amount
-      } else {
-        sender() ! Error("Invalid amount")
+      amount match {
+        case amount if validAmounts contains amount => { currentAmount += amount
+          sender() ! s"Current amount $$${currentAmount}" }
+        case _ => sender() ! Error("Unsupported money")
       }
 
     case Selection(input) =>
-      val slot = slots(input)
-
-
-      if(slot.isEmpty){
-        sender() ! Error("Invalid amount")
-      } else {
-        self ! Dispense(input, slot)
+      input match {
+        case input if !slots.contains(input) => sender() !  Error("Invalid selection")
+        case input if slots(input).isEmpty => sender() !  Error("Item out of stock")
+        case _ => Dispense(input, slots(input)(1))
       }
 
-    case Dispense(position, slot) =>
-      val item = slot(1)
 
-      if (currentAmount < item.price){
-        sender() ! Error("Item A7 costs $1.25")
-      } else {
-        sender() ! s"Dispensed item ${position}"
+    case Dispense(position, item) =>
+      item.price match {
+        case price if price > currentAmount =>  sender() ! s"Item ${position} costs $$${item.price}"
+        case price if price == currentAmount =>  sender() ! s"Dispensed item ${position}"
+        case _ =>  sender() ! s"Dispensed change: ${currentAmount}"
       }
-
 
     case Cancel =>
-      if (currentAmount > 0){
-        sender ! s"Dispensed change: ${currentAmount}"
-        currentAmount
-      } else {
-        sender !  "Order canceled"
+      val msg = currentAmount match {
+        case currentAmount if currentAmount > 0 =>"Dispensed change: ${currentAmount}"
+        case _ =>  "Order canceled"
       }
-    case _ => print("Error")
+      sender() ! msg
+
   }
 }
 
