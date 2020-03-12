@@ -8,10 +8,11 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ListBuffer
+import scala.language.postfixOps
 import scala.util.Random.nextInt
 
 class VendingMachineTest()
-  extends TestKit(ActorSystem("com.apexsystems.vendingmachine.actor.VendingMachineTest", ConfigFactory.parseString(VendingMachineTest.config)))
+  extends TestKit(ActorSystem("VendingMachineTest", ConfigFactory.parseString(VendingMachineTest.config)))
     with ImplicitSender
     with AnyWordSpecLike
     with Matchers
@@ -26,7 +27,7 @@ class VendingMachineTest()
   def getItems(): ListBuffer[Item] = ListBuffer[Item]().addAll(LazyList.continually(items(nextInt(itemsSize))).take(nextInt(15)))
 
   //Method to get Slots with Random content
-  def getSlots(): Map[String, ListBuffer[Item]] = Map("A1" -> getItems(),"A2" -> getItems(),"A3" -> getItems(),"A4" -> getItems(),"B1" -> getItems())
+  def getSlots(): Map[String, ListBuffer[Item]] = Map("A1" -> getItems(),"A2" -> getItems(),"A3" -> getItems(),"A4" -> getItems(),"B1" -> getItems(), "B2" -> ListBuffer(items(1)))
 
   override def afterAll: Unit = {
     TestKit.shutdownActorSystem(system)
@@ -51,11 +52,24 @@ class VendingMachineTest()
   "A Vendor Machine actor" must {
     "Select valid item with no money deposited" in {
       val echo = system.actorOf(Props(new VendingMachine(0.0, getSlots())))
-      echo ! Selection("A1")
-      expectMsg("Invalid selection")
+      echo ! Selection("B2")
+      //receiveWhile(500 millis) {
+      //  case msg: String => println(msg)
+      //}
+      expectMsg(s"Item B2 costs $$${items(1).price}")
     }
   }
 
+  "A Vendor Machine actor" must {
+    "Select valid item with not enough money deposited" in {
+      val echo = system.actorOf(Props(new VendingMachine(0.0, getSlots())))
+      echo ! Selection("B2")
+      //receiveWhile(500 millis) {
+      //  case msg: String => println(msg)
+      //}
+      expectMsg(s"Item B2 costs $$${items(1).price}")
+    }
+  }
 
 
 }

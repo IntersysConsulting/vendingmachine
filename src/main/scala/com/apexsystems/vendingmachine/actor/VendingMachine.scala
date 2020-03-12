@@ -1,6 +1,7 @@
 package com.apexsystems.vendingmachine.actor
 
-import akka.actor.Actor
+import akka.actor.{Actor, ActorRef}
+
 import scala.collection.mutable.ListBuffer
 
 case class Selection(input : String)
@@ -8,7 +9,7 @@ case class Money(amount : Double)
 case class Item(name : String, sku : Int, price : Double)
 case class Cancel()
 case class Error(desc : String)
-case class Dispense(position : String, item : Item)
+case class Dispense(position : String, item : Item, sender: ActorRef)
 
 class VendingMachine(var currentAmount : Double, slots : Map[String, ListBuffer[Item]]) extends Actor{
   val validAmounts = Array(0.05, 0.10, 0.25, 1, 5)
@@ -25,14 +26,14 @@ class VendingMachine(var currentAmount : Double, slots : Map[String, ListBuffer[
       input match {
         case input if !slots.contains(input) => sender() !  "Invalid selection"
         case input if slots(input).isEmpty => sender() !  "Item out of stock"
-        case _ => Dispense(input, slots(input)(1))
+        case _ => self ! Dispense(input, slots(input)(0), sender())
       }
 
-    case Dispense(position, item) =>
+    case Dispense(position, item, sender) =>
       item.price match {
-        case price if price > currentAmount =>  sender() ! s"Item ${position} costs $$${item.price}"
-        case price if price == currentAmount =>  sender() ! s"Dispensed item ${position}"
-        case _ =>  sender() ! s"Dispensed change: ${currentAmount}"
+        case price if price > currentAmount =>  sender ! s"Item ${position} costs $$${item.price}"
+        case price if price == currentAmount =>  sender ! s"Dispensed item ${position}"
+        case _ =>  sender ! s"Dispensed change: ${currentAmount}"
       }
 
     case Cancel =>
