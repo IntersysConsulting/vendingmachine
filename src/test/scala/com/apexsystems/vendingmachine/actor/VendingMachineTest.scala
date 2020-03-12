@@ -24,7 +24,7 @@ class VendingMachineTest()
   val itemsSize = items.size
 
   //Method to generate a random list of Items
-  def getItems(): ListBuffer[Item] = ListBuffer[Item]().addAll(LazyList.continually(items(nextInt(itemsSize))).take(nextInt(15)))
+  def getItems(): ListBuffer[Item] = ListBuffer[Item]().addAll(LazyList.continually(items(nextInt(itemsSize))).take(nextInt(MAX_SLOT_SIZE)))
 
   //Method to get Slots with Random content
   def getSlots(): Map[String, ListBuffer[Item]] = Map("A1" -> getItems(),"A2" -> getItems(),"A3" -> getItems(),"A4" -> new ListBuffer[Item],"B1" -> getItems(), "B2" -> ListBuffer(items(1)))
