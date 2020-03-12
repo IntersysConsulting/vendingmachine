@@ -1,17 +1,14 @@
 package com.apexsystems.vendingmachine.actor
 
 import akka.actor.Actor
-
 import scala.collection.mutable.ListBuffer
 
-
-case class Selection(val input : String)
+case class Selection(input : String)
 case class Money(amount : Double)
-case class Item(val name : String, val sku : Int, val price : Double)
+case class Item(name : String, sku : Int, price : Double)
 case class Cancel()
 case class Error(desc : String)
 case class Dispense(position : String, item : Item)
-
 
 class VendingMachine(var currentAmount : Double, slots : Map[String, ListBuffer[Item]]) extends Actor{
   val validAmounts = Array(0.05, 0.10, 0.25, 1, 5)
@@ -21,16 +18,15 @@ class VendingMachine(var currentAmount : Double, slots : Map[String, ListBuffer[
       amount match {
         case amount if validAmounts contains amount => { currentAmount += amount
           sender() ! s"Current amount $$${currentAmount}" }
-        case _ => sender() ! Error("Unsupported money")
+        case _ => sender() ! "Unsupported money"
       }
 
     case Selection(input) =>
       input match {
-        case input if !slots.contains(input) => sender() !  Error("Invalid selection")
-        case input if slots(input).isEmpty => sender() !  Error("Item out of stock")
+        case input if !slots.contains(input) => sender() !  "Invalid selection"
+        case input if slots(input).isEmpty => sender() !  "Item out of stock"
         case _ => Dispense(input, slots(input)(1))
       }
-
 
     case Dispense(position, item) =>
       item.price match {
@@ -40,12 +36,13 @@ class VendingMachine(var currentAmount : Double, slots : Map[String, ListBuffer[
       }
 
     case Cancel =>
-      val msg = currentAmount match {
-        case currentAmount if currentAmount > 0 =>"Dispensed change: ${currentAmount}"
-        case _ =>  "Order canceled"
+      currentAmount match {
+        case currentAmount if currentAmount > 0 => sender() ! "Dispensed change: ${currentAmount}"
+        case _ => sender() ! "Order canceled"
       }
-      sender() ! msg
 
+    case _ =>
+      sender() ! "NA"
   }
 }
 
